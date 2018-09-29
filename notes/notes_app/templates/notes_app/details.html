@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Note details</title>
+</head>
+<body>
+
+{# Load the tag library #}
+{% load bootstrap4 %}
+
+{# Load CSS and JavaScript #}
+{% bootstrap_css %}
+{% bootstrap_javascript jquery='full' %}
+
+<script type="text/javascript">
+  $(document).ready(function() {
+
+  });
+</script>
+
+<!-- navigation bar -->
+<nav class="navbar navbar-expand navbar-light bg-light">
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav mr-auto">
+            <li class="nav-item active">
+                <a class="nav-link" href="{% url 'notes_list' %}">
+                    Home
+                    <span class="sr-only">(current)</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'note_editor' note.id %}">
+                    Edit note
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+<!-- note editor -->
+<div class="container" role="main">
+    <h5 class="border-bottom">{{ note.caption }}</h5>
+    <h6 class="mb-2 text-muted text-left">{{ note.type }}</h6>
+    <p>{{ note.text }}</p>
+    <p class="text-right"><small class="text-muted">{{ note.date }}</small></p>
+</div>
+
+</body>
+</html>

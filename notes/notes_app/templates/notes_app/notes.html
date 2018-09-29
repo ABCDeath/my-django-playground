@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Notes list</title>
+
+    <style type="text/css">
+        .note_container {
+            width: 18rem;
+        }
+
+        .card-columns {
+            @include media-breakpoint-only(lg) {
+                column-count: 4;
+            }
+
+            @include media-breakpoint-only(xl) {
+                column-count: 5;
+            }
+        }
+
+    </style>
+</head>
+
+<body>
+
+{# Load the tag library #}
+{% load bootstrap4 %}
+
+{# Load CSS and JavaScript #}
+{% bootstrap_css %}
+{% bootstrap_javascript jquery='full' %}
+
+<script type="text/javascript">
+  $(document).ready(function() {
+
+  });
+
+</script>
+
+<!-- navigation bar -->
+<nav class="navbar navbar-expand navbar-light bg-light">
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav mr-auto">
+            <li class="nav-item active">
+                <a class="nav-link" href="#">Home<span class="sr-only">(current)</span></a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#">New Note</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link disabled" href="#">Disabled</a>
+            </li>
+        </ul>
+        <form class="form-inline my-2 my-lg-0">
+            <input class="form-control mr-sm-2" type="search"
+                   placeholder="Search" aria-label="Search">
+            <button class="btn btn-outline-primary my-2 my-sm-0" type="submit">
+                Search
+            </button>
+        </form>
+    </div>
+</nav>
+
+<!-- note cards -->
+{% if notes %}
+<div class="container">
+    <div class="card-columns">
+        {% for note in notes %}
+        <div class="note_container card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title text-left text-truncate border-bottom">
+                    {{ note.caption }}
+                </h5>
+                <h6 class="card-subtitle mb-2 text-muted text-left">
+                    {{ note.type }}
+                </h6>
+                <p class="card-text">
+                    {{ note.text }}
+                </p>
+                <p class="card-text text-right">
+                    <small class="text-muted">
+                        {{ note.date }}
+                    </small>
+                </p>
+                <a class="btn btn-outline-primary" role="button" href="{% url 'note_details' note.id %}">View</a>
+                <a class="btn btn-outline-primary" type="button" href="{% url 'note_editor' note.id %}">Edit</a>
+                <button type="button" class="btn btn-outline-danger">Delete</button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% else %}
+<p>No notes available.</p>
+{% endif %}
+
+</body>
+</html>

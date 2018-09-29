@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Note edit</title>
+
+    <style type="text/css">
+
+    </style>
+</head>
+<body>
+
+{# Load the tag library #}
+{% load bootstrap4 %}
+
+{# Load CSS and JavaScript #}
+{% bootstrap_css %}
+{% bootstrap_javascript jquery='full' %}
+
+<link href="https://fonts.googleapis.com/css?family=Lobster" rel="stylesheet"
+      type="text/css">
+
+<script type="text/javascript">
+  $(document).ready(function() {
+    $('.note_caption').val('{{ note.caption }}');
+    $('.note_type').val('{{ note.type }}');
+
+    $('.menu_reset').click(function() {
+        $('.note_caption').val('{{ note.caption }}');
+        $('.note_type').val('{{ note.type }}');
+        $('#note_content').val('{{ note.text }}');
+    });
+
+    $('#red').click(function() {
+        $('.color_menu').removeClass('text-secondary bg-danger bg-warning bg-success bg-info bg-primary');
+        $('.color_menu').addClass('text-light bg-danger');
+        $('.color_menu').text('Red');
+    });
+
+    $('#yellow').click(function() {
+        $('.color_menu').removeClass('text-light bg-danger bg-warning bg-success bg-info bg-primary');
+        $('.color_menu').addClass('text-secondary bg-warning');
+        $('.color_menu').text('Yellow');
+    });
+
+    $('#green').click(function() {
+        $('.color_menu').removeClass('text-secondary bg-danger bg-warning bg-success bg-info bg-primary');
+        $('.color_menu').addClass('text-light bg-success');
+        $('.color_menu').text('Green');
+    });
+
+    $('#cyan').click(function() {
+        $('.color_menu').removeClass('text-secondary bg-danger bg-warning bg-success bg-info bg-primary');
+        $('.color_menu').addClass('text-light bg-info');
+        $('.color_menu').text('Cyan');
+    });
+
+    $('#blue').click(function() {
+        $('.color_menu').removeClass('text-secondary bg-danger bg-warning bg-success bg-info bg-primary');
+        $('.color_menu').addClass('text-light bg-primary');
+        $('.color_menu').text('Blue');
+    });
+
+    $('#grey').click(function() {
+        $('.color_menu').removeClass('text-secondary bg-danger bg-warning bg-success bg-info bg-primary');
+        $('.color_menu').addClass('text-light bg-secondary');
+        $('.color_menu').text('Grey');
+    });
+  });
+
+
+</script>
+
+<!-- navigation bar -->
+<nav class="navbar navbar-expand navbar-light bg-light">
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav mr-auto">
+            <li class="nav-item active">
+                <a class="nav-link" href="{% url 'notes_list' %}">
+                    Home
+                    <span class="sr-only">(current)</span>
+                </a>
+            </li>
+            {% if note %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'note_details' note.id %}">
+                        View note
+                    </a>
+                </li>
+            {% endif %}
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown"
+                   role="button" data-toggle="dropdown" aria-haspopup="true"
+                   aria-expanded="false">
+                    Action
+                </a>
+                <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                    <a class="dropdown-item menu_submit" href="#">Submit</a>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item menu_reset" href="#">Reset</a>
+                </div>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+<!-- note editor -->
+<div class="container" role="main">
+    <form>
+        <div class="form-group">
+            <input class="form-control note_caption my-2" type="text"
+                   placeholder="note caption">
+            <input class="form-control form-control-sm note_type my-2"
+                   type="text" placeholder="note type">
+            <textarea class="form-control my-2" id="note_content" rows="3">{{ note.text }}</textarea>
+            <input class="form-control" type="text"
+                   placeholder="{{ note.date }}" readonly>
+            {% if note %}
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value=""
+                           id="update_date">
+                    <label class="form-check-label" for="update_date">
+                        Update note date
+                    </label>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="dropdown">
+            <button class="btn btn-secondary dropdown-toggle color_menu" type="button"
+                    id="dropdownMenuButton" data-toggle="dropdown"
+                    aria-haspopup="true" aria-expanded="false">
+                Color
+            </button>
+            <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                <a class="dropdown-item text-light bg-danger" id='red' href="#">Red</a>
+                <a class="dropdown-item text-secondary bg-warning" id='yellow' href="#">Yellow</a>
+                <a class="dropdown-item text-light bg-success" id='green' href="#">Green</a>
+                <a class="dropdown-item text-light bg-info" id='cyan' href="#">Cyan</a>
+                <a class="dropdown-item text-light bg-primary" id='blue' href="#">Blue</a>
+                <a class="dropdown-item text-light bg-secondary" id='grey' href="#">Grey</a>
+            </div>
+        </div>
+    </form>
+</div>
+
+</body>
+</html>
