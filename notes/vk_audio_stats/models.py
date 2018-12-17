@@ -27,25 +27,40 @@ class AudioStatsDBRouter:
 class Genre(models.Model):
     name = models.CharField(max_length=20, unique=True)
 
+    def __str__(self):
+        return self.name
+
 
 class Subgenre(models.Model):
     name = models.CharField(max_length=20, unique=True)
 
+    def __str__(self):
+        return self.name
+
 
 class Artist(models.Model):
     name = models.CharField(max_length=64, unique=True)
-    genre = models.ForeignKey(Genre, on_delete=models.DO_NOTHING)
-    subgenre = models.ForeignKey(Subgenre, on_delete=models.DO_NOTHING)
+    genre = models.ForeignKey(Genre, on_delete=models.DO_NOTHING,
+                              null=True, blank=True)
+    subgenre = models.ForeignKey(Subgenre, on_delete=models.DO_NOTHING,
+                                 null=True, blank=True)
+
+    def __str__(self):
+        return f'{self.name} ({self.subgenre or ""} {self.genre or ""})'
 
 
 class VkUser(models.Model):
     vk_id = models.CharField(max_length=8, unique=True)
     name = models.CharField(max_length=64)
 
+    def __str__(self):
+        return f'{self.vk_id}: {self.name}'
 
-class User2Artist(models.Model):
-    vk_user = models.ForeignKey(VkUser, on_delete=models.CASCADE)
-    artist = models.ForeignKey(Artist, on_delete=models.DO_NOTHING)
+
+class Tracks(models.Model):
+    vk_user = models.ManyToManyField(VkUser)
+    artist = models.ManyToManyField(Artist)
     tracks = models.PositiveIntegerField()
 
-
+    def __str__(self):
+        return f'{self.vk_user} - {self.artist} - {self.tracks}'

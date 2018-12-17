@@ -33,8 +33,8 @@ ALLOWED_HOSTS = ['localhost']
 INSTALLED_APPS = [
     # notes
     'notes_app.apps.NotesAppConfig',
-    'bootstrap4',
-    'jquery',
+    # 'bootstrap4',
+    # 'jquery',
     # vk audio stats
     'vk_audio_stats.apps.VkAudioStatsConfig',
     # django
@@ -81,8 +81,7 @@ WSGI_APPLICATION = 'notes.wsgi.application'
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
 
 DATABASES = {
-    'default': {},
-    'notes_db': {
+    'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'notes',
         'USER': 'banana',
@@ -102,8 +101,7 @@ DATABASES = {
 
 
 DATABASE_ROUTERS = [
-    'notes_app.models.NotesDBRouter',
-    'vk_audio_stats.models.AudioStatsDBRouter',
+    'notes.db_router.DBRouter',
 ]
 
 # Password validation
