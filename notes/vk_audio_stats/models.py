@@ -52,15 +52,16 @@ class Artist(models.Model):
 class VkUser(models.Model):
     vk_id = models.CharField(max_length=8, unique=True)
     name = models.CharField(max_length=64)
+    artists = models.ManyToManyField(Artist, through='ArtistCount')
 
     def __str__(self):
         return f'{self.vk_id}: {self.name}'
 
 
-class Tracks(models.Model):
-    vk_user = models.ManyToManyField(VkUser)
-    artist = models.ManyToManyField(Artist)
-    tracks = models.PositiveIntegerField()
+class ArtistCount(models.Model):
+    vk_user = models.ForeignKey(VkUser, on_delete=models.DO_NOTHING)
+    artist = models.ForeignKey(Artist, on_delete=models.DO_NOTHING)
+    tracks_num = models.PositiveIntegerField()
 
     def __str__(self):
-        return f'{self.vk_user} - {self.artist} - {self.tracks}'
+        return f'{self.vk_user} - {self.artist} - {self.tracks_num}'
