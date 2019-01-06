@@ -40,28 +40,31 @@ class Subgenre(models.Model):
 
 class Artist(models.Model):
     name = models.CharField(max_length=64, unique=True)
+
+    def __str__(self):
+        return f'{self.name}'
+
+
+class Track(models.Model):
+    title = models.CharField(max_length=64, unique=False)
+    artist = models.ForeignKey(Artist, on_delete=models.DO_NOTHING)
     genre = models.ForeignKey(Genre, on_delete=models.DO_NOTHING,
                               null=True, blank=True)
     subgenre = models.ForeignKey(Subgenre, on_delete=models.DO_NOTHING,
                                  null=True, blank=True)
 
     def __str__(self):
-        return f'{self.name} ({self.subgenre or ""} {self.genre or ""})'
+        return f'"{self.title}" by {self.artist} ' \
+               f'({self.subgenre or ""} {self.genre or ""})'
 
 
 class VkUser(models.Model):
     vk_id = models.CharField(max_length=8, unique=True)
     name = models.CharField(max_length=64)
-    artists = models.ManyToManyField(Artist, through='ArtistCount')
+    tracks = models.ManyToManyField(Track)
 
     def __str__(self):
         return f'{self.vk_id}: {self.name}'
 
 
-class ArtistCount(models.Model):
-    vk_user = models.ForeignKey(VkUser, on_delete=models.DO_NOTHING)
-    artist = models.ForeignKey(Artist, on_delete=models.DO_NOTHING)
-    tracks_num = models.PositiveIntegerField()
 
-    def __str__(self):
-        return f'{self.vk_user} - {self.artist} - {self.tracks_num}'
