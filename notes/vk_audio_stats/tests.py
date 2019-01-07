@@ -1,5 +1,5 @@
 from django.db import transaction
-from django.db.models import Sum, Count
+from django.db.models import Count, Q
 from django.test import TestCase
 
 from .models import Artist, Genre, Subgenre, Track, VkUser
@@ -119,13 +119,53 @@ class TrackModelTest(TestCase):
 
         q = (Track.objects.filter(
             genre__name='genre_1', subgenre__name='subgenre_1').
-             values_list('vkuser__name'). annotate(Count('vkuser__name')))
+             values_list('vkuser__name').annotate(Count('vkuser__name')))
 
         users_tracks = {name: count for name, count in q}
 
         self.assertDictEqual(
             users_tracks,
             {'Heisenberg': 2, 'Cat Whiskers': 1, 'Gordon Freeman': 1})
+
+    def test_retrieve_users_by_subgenre_w_diff_genres(self):
+        prepare_data()
+
+        genre_condition = Q(genre__name='genre_1') | Q(genre__name='genre_2')
+        q = (Track.objects.filter(genre_condition, subgenre__name='subgenre_1').
+             values_list('vkuser__name').annotate(Count('vkuser__name')))
+
+        users_tracks = {name: count for name, count in q}
+
+        self.assertDictEqual(
+            users_tracks,
+            {'Heisenberg': 3, 'Cat Whiskers': 2, 'Gordon Freeman': 2})
+
+    def test_retrieve_common_subgenres_for_all_users(self):
+        prepare_data()
+
+        userlist = VkUser.objects.all()
+        tracks = (Track.objects.filter(vkuser__in=userlist).
+                  values_list('subgenre__name', 'genre__name', 'vkuser__name').
+                  annotate(Count('subgenre')))
+        group_by_genre = {' '.join(x[0:2]): [] for x in tracks}
+        [group_by_genre[' '.join(x[0:2])].append((x[2], x[3])) for x in tracks]
+
+        result = {g: sorted(u, key=lambda x: x[0])
+                  for g, u in group_by_genre.items()
+                  if len(u) == len(userlist)}
+
+        self.assertDictEqual(
+            result,
+            {
+                'subgenre_1 genre_1': sorted(
+                    [('Heisenberg', 2), ('Cat Whiskers', 1),
+                     ('Gordon Freeman', 1)], key=lambda x: x[0]),
+                'subgenre_1 genre_2': sorted(
+                    [('Heisenberg', 1), ('Cat Whiskers', 1),
+                     ('Gordon Freeman', 1)], key=lambda x: x[0])
+            }
+        )
+
 
 class VkUserModelTest(TestCase):
     multi_db = True
@@ -193,5 +233,3 @@ class VkUserModelTest(TestCase):
             common['Gordon Freeman'],
             {'subgenre_1 genre_1': 1, 'subgenre_1 genre_2': 1,
              'subgenre_3 genre_1': 1})
-
-

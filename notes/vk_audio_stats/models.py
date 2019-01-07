@@ -1,3 +1,21 @@
+"""
+┌──VkUser───┐        ┌──Track──────┐       ┌──Artist───┐
+│* id       │  ┌────►│* id         │  ┌───►│* id       │
+│  vk_id    │  │     │  title      │  │    │  name     │
+│  name     │  │     │  artist     │──┘    └───────────┘
+│  tracks   │──┘     │  genre      │────┐
+└───────────┘        │  subgenre   │─┐  │  ┌──Genre────┐
+                     └─────────────┘ │  └─►│* id       │
+                                     │     │  name     │
+                                     │     └───────────┘
+                                     │
+                                     │     ┌──Subgenre─┐
+                                     └────►│* id       │
+                                           │  name     │
+                                           └───────────┘
+"""
+
+
 from django.db import models
 
 
