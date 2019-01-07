@@ -102,60 +102,30 @@ def prepare_data():
 class TrackModelTest(TestCase):
     multi_db = True
 
-    def prepare_data(self):
-        with transaction.atomic():
-            for genre in ['genre_1', 'genre_2', 'genre_3']:
-                Genre(name=genre).save()
+    def test_retrieve_users_by_genre(self):
+        prepare_data()
 
-            for sub in ['subgenre_1', 'subgenre_2', 'subgenre_3']:
-                Subgenre(name=sub).save()
+        q = (Track.objects.filter(genre__name='genre_1').
+             values_list('vkuser__name'). annotate(Count('vkuser__name')))
 
-            for artist in ['artist_1', 'artist_2', 'artist_3',
-                           'artist_4', 'artist_5']:
-                Artist(name=artist).save()
+        users_tracks = {name: count for name, count in q}
 
-    def test_add(self):
-        self.prepare_data()
+        self.assertDictEqual(
+            users_tracks,
+            {'Heisenberg': 3, 'Cat Whiskers': 2, 'Gordon Freeman': 3})
 
-        a = Artist.objects.get(name='artist_1')
-        g = Genre.objects.get(name='genre_1')
-        s = Subgenre.objects.get(name='subgenre_1')
+    def test_retrieve_users_by_subgenre(self):
+        prepare_data()
 
-        t = Track(title='title_1', artist=a, genre=g, subgenre=s)
-        t.save()
+        q = (Track.objects.filter(
+            genre__name='genre_1', subgenre__name='subgenre_1').
+             values_list('vkuser__name'). annotate(Count('vkuser__name')))
 
-        self.assertQuerysetEqual()
+        users_tracks = {name: count for name, count in q}
 
-
-    def test_retrieve(self):
-        self.prepare_data()
-
-        users = {
-            'user_1': 'Heisenberg',
-            'user_2': 'Cat Whiskers',
-            'user_3': 'Gordon Freeman'
-        }
-
-        tracks = {
-            'user_1': [
-                ('artist_1', 'track_1'),
-                ('artist_1', 'track_2'),
-                ('artist_2', 'track_3'),
-                ('artist_3', 'track_1')
-            ],
-            'user_2': [
-                ('artist_1', 'track_1'),
-                ('artist_1', 'track_3'),
-                ('artist_2', 'track_4'),
-                ('artist_4', 'track_5')
-            ],
-            'user_3': [
-                ('artist_1', 'track_1'),
-                ('artist_1', 'track_3'),
-                ('artist_2', 'track_6'),
-                ('artist_5', 'track_7')
-            ]
-        }
+        self.assertDictEqual(
+            users_tracks,
+            {'Heisenberg': 2, 'Cat Whiskers': 1, 'Gordon Freeman': 1})
 
         with transaction.atomic():
             for user in tracks:
