@@ -127,45 +127,16 @@ class TrackModelTest(TestCase):
             users_tracks,
             {'Heisenberg': 2, 'Cat Whiskers': 1, 'Gordon Freeman': 1})
 
-        with transaction.atomic():
-            for user in tracks:
-                u = VkUser(vk_id=user, name=users[user])
-                u.save()
+class VkUserModelTest(TestCase):
+    multi_db = True
 
-                for artist, name in tracks[user]:
-                    t, created = Track.objects.get_or_create(
-                        title=name, artist=Artist.objects.get(name=artist))
-                    if created:
-                        t.save()
-                    u.tracks.add(t)
-
-        tags = {
-            ('artist_1', 'track_1'): ('genre_1', 'subgenre_1'),
-            ('artist_1', 'track_2'): ('genre_1', 'subgenre_2'),
-            ('artist_2', 'track_3'): ('genre_1', 'subgenre_1'),
-            ('artist_3', 'track_1'): ('genre_2', 'subgenre_1'),
-            ('artist_1', 'track_3'): ('genre_2', 'subgenre_1'),
-            ('artist_2', 'track_4'): ('genre_3', 'subgenre_1'),
-            ('artist_4', 'track_5'): ('genre_1', 'subgenre_3'),
-            ('artist_2', 'track_6'): ('genre_1', 'subgenre_3'),
-            ('artist_5', 'track_7'): ('genre_1', 'subgenre_2')
-        }
-
-        for artist, title in tags:
-            a = Artist.objects.get(name=artist)
-            g = Genre.objects.get(name=tags[(artist, title)][0])
-            s = Subgenre.objects.get(name=tags[(artist, title)][1])
-
-            t = Track.objects.get(artist=a, title=title)
-            t.genre, t.subgenre = g, s
-            t.save()
-
-        # общие жанры пользователя с остальными
+    def test_retrieve_user_common_genres(self):
+        prepare_data()
 
         heisenberg_genres = {
             x[0]: x[1] for x in
             (VkUser.objects.get(name='Heisenberg').
-                tracks.values_list('genre__name').annotate(Count('genre')))
+             tracks.values_list('genre__name').annotate(Count('genre')))
         }
 
         others = VkUser.objects.all().exclude(name='Heisenberg')
@@ -189,3 +160,38 @@ class TrackModelTest(TestCase):
 
         self.assertDictEqual(common['Gordon Freeman'],
                              {'genre_1': 3, 'genre_2': 1})
+
+    def test_retrieve_user_common_subgenres(self):
+        cat_genres = {
+            ' '.join(x[0:2]): x[2] for x in
+            (VkUser.objects.get(name='Cat Whiskers').
+             tracks.values_list('subgenre__name', 'genre__name').
+             annotate(Count('subgenre')))
+        }
+
+        others = VkUser.objects.all().exclude(name='Cat Whiskers')
+        others_genres = {
+            u.name: {
+                ' '.join(x[0:2]): x[2] for x in
+                u.tracks.values_list('subgenre__name', 'genre__name').
+                    annotate(Count('subgenre'))
+                if ' '.join(x[0:2]) in cat_genres
+            } for u in others
+        }
+
+        common = {
+            user_name: {
+                name: min(genres[name], cat_genres[name])
+                for name in genres
+            } for user_name, genres in others_genres.items()
+        }
+
+        self.assertDictEqual(common['Heisenberg'],
+                             {'subgenre_1 genre_1': 1, 'subgenre_1 genre_2': 1})
+
+        self.assertDictEqual(
+            common['Gordon Freeman'],
+            {'subgenre_1 genre_1': 1, 'subgenre_1 genre_2': 1,
+             'subgenre_3 genre_1': 1})
+
+
