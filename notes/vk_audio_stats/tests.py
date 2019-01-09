@@ -202,6 +202,8 @@ class VkUserModelTest(TestCase):
                              {'genre_1': 3, 'genre_2': 1})
 
     def test_retrieve_user_common_subgenres(self):
+        prepare_data()
+
         cat_genres = {
             ' '.join(x[0:2]): x[2] for x in
             (VkUser.objects.get(name='Cat Whiskers').
