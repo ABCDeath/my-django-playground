@@ -17,9 +17,8 @@
 <body>
 
 {% if genre_list %}
-    <form action="" method="get">
-
-        <div class="fieldset_holder">
+    <div class="fieldset_holder">
+        <form action="" method="get">
             <fieldset>
                 <legend>Доступные жанры:</legend>
                 {% for genre in genre_list %}
@@ -28,11 +27,31 @@
                 {% endfor %}
             </fieldset>
 
-            <input type="submit" value="Показать пользователей" />
-        </div>
+            <input type="submit" value="Показать пользователей"/>
+            <input type="reset" value="Сбросить">
+        </form>
 
         {{ div | safe }}
-    </form>
+    </div>
+
+    <div class="fieldset_holder">
+        {% if user_list %}
+            <fieldset>
+                <legend>Пользователи, у которых есть треки выбранных жанров:</legend>
+                <ul>
+                    {% for user, genre_list in user_list.items %}
+                        <li>{{ user }}:
+                            <ul>
+                                {% for genre, count in genre_list.items %}
+                                    <li>{{ genre }}: {{ count }}</li>
+                                {% endfor %}
+                            </ul>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </fieldset>
+        {% endif %}
+    </div>
 {% else %}
     <p>Список жанров недоступен.</p>
 {% endif %}

@@ -1,4 +1,6 @@
+import functools
 import math
+import operator
 
 from django.db.models import Count, Q
 from django.http import HttpResponse, HttpResponseRedirect
@@ -44,7 +46,27 @@ def index(request):
 
     script, div = components(p)
 
+    # пользователи по выбранным жанрам
+    genre_id_list = request.GET.getlist('genre')
+
+    user_list = {}
+    if genre_id_list:
+        condition = functools.reduce(
+            operator.or_,
+            [Q(genre__id=int(genre_id)) for genre_id in genre_id_list])
+
+        q = (Track.objects.filter(condition)
+             .values_list('vkuser__name', 'genre__name')
+             .annotate(Count('vkuser__name')))
+
+        for name, genre, count in q:
+            if name not in user_list:
+                user_list[name] = {}
+
+            user_list[name][genre] = count
+
     return render(request, 'vk_audio_stats/index.html',
                   {'genre_list': genre_list,
                    'script': script,
-                   'div': div})
+                   'div': div,
+                   'user_list': user_list})

@@ -1,5 +1,7 @@
 .fieldset_holder {
     width: 600px;
+    display: inline-block;
+    vertical-align: top;
 }
 
 fieldset {
