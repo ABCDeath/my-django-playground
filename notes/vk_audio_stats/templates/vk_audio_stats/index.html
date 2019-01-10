@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Index page</title>
+
+    <link href="http://cdn.pydata.org/bokeh/release/bokeh-1.0.4.min.css" rel="stylesheet" type="text/css">
+    <link href="http://cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.4.min.css" rel="stylesheet" type="text/css">
+
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'vk_audio_stats/style.css' %}">
+
+    <script src="http://cdn.pydata.org/bokeh/release/bokeh-1.0.4.min.js"></script>
+    <script src="http://cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.4.min.js"></script>
+</head>
+
+<body>
+
+{% if genre_list %}
+    <form action="" method="get">
+
+        <div class="fieldset_holder">
+            <fieldset>
+                <legend>Доступные жанры:</legend>
+                {% for genre in genre_list %}
+                    <input type="checkbox" name="genre" id="genre{{ forloop.counter }}" value="{{ genre.id }}">
+                    <label for="genre{{ forloop.counter }}">{{ genre }}</label><br>
+                {% endfor %}
+            </fieldset>
+
+            <input type="submit" value="Показать пользователей" />
+        </div>
+
+        {{ div | safe }}
+    </form>
+{% else %}
+    <p>Список жанров недоступен.</p>
+{% endif %}
+
+</body>
+{{ script | safe }}
+</html>
