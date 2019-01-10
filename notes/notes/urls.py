@@ -19,5 +19,6 @@ from django.urls import include
 
 urlpatterns = [
     path(r'notes/', include('notes_app.urls')),
+    path(r'vk_audio_stats/', include('vk_audio_stats.urls')),
     path('admin/', admin.site.urls),
 ]

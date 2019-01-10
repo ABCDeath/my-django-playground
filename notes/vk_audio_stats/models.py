@@ -4,13 +4,8 @@
 │  vk_id    │  │     │  title      │  │    │  name     │
 │  name     │  │     │  artist     │──┘    └───────────┘
 │  tracks   │──┘     │  genre      │────┐
-└───────────┘        │  subgenre   │─┐  │  ┌──Genre────┐
-                     └─────────────┘ │  └─►│* id       │
-                                     │     │  name     │
-                                     │     └───────────┘
-                                     │
-                                     │     ┌──Subgenre─┐
-                                     └────►│* id       │
+└───────────┘        │  subgenre   │    │  ┌──Genre────┐
+                     └─────────────┘    └─►│* id       │
                                            │  name     │
                                            └───────────┘
 """
@@ -43,14 +38,7 @@ class AudioStatsDBRouter:
 
 
 class Genre(models.Model):
-    name = models.CharField(max_length=20, unique=True)
-
-    def __str__(self):
-        return self.name
-
-
-class Subgenre(models.Model):
-    name = models.CharField(max_length=20, unique=True)
+    name = models.CharField(max_length=32, unique=True)
 
     def __str__(self):
         return self.name
@@ -68,12 +56,9 @@ class Track(models.Model):
     artist = models.ForeignKey(Artist, on_delete=models.DO_NOTHING)
     genre = models.ForeignKey(Genre, on_delete=models.DO_NOTHING,
                               null=True, blank=True)
-    subgenre = models.ForeignKey(Subgenre, on_delete=models.DO_NOTHING,
-                                 null=True, blank=True)
 
     def __str__(self):
-        return f'"{self.title}" by {self.artist} ' \
-               f'({self.subgenre or ""} {self.genre or ""})'
+        return f'"{self.title}" by {self.artist} ({self.genre or ""})'
 
 
 class VkUser(models.Model):
@@ -83,6 +68,3 @@ class VkUser(models.Model):
 
     def __str__(self):
         return f'{self.vk_id}: {self.name}'
-
-
-
