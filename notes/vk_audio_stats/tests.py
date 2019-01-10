@@ -2,37 +2,38 @@ from django.db import transaction
 from django.db.models import Count, Q
 from django.test import TestCase
 
-from .models import Artist, Genre, Subgenre, Track, VkUser
+from .models import Artist, Genre, Track, VkUser
 
 
 def prepare_data():
     """
     Функция создает данные в таблице:
         Пользователь Heisenberg:
-            artist_1 - track_1 (subgenre_1 genre_1)
-            artist_1 - track_2 (subgenre_2 genre_1)
-            artist_2 - track_3 (subgenre_1 genre_1)
-            artist_3 - track_1 (subgenre_1 genre_2)
+            artist_1 - track_1 (hard rock)
+            artist_1 - track_2 (post rock)
+            artist_2 - track_3 (post metal)
+            artist_3 - track_1 (hard bop)
+            artist_4 - track_4 (post rock)
 
         Пользователь Cat Whiskers:
-            artist_1 - track_1 (subgenre_1 genre_1)
-            artist_1 - track_3 (subgenre_1 genre_2)
-            artist_2 - track_4 (subgenre_1 genre_3)
-            artist_4 - track_5 (subgenre_3 genre_1)
+            artist_1 - track_4 (punk rock)
+            artist_1 - track_3 (post rock)
+            artist_2 - track_4 (blues)
+            artist_1 - track_1 (hard rock)
+            artist_2 - track_5 (post metal)
 
         Пользователь Gordon Freeman:
-            artist_1 - track_1 (subgenre_1 genre_1)
-            artist_1 - track_3 (subgenre_1 genre_2)
-            artist_2 - track_6 (subgenre_3 genre_1)
-            artist_5 - track_7 (subgenre_2 genre_1)
+            artist_1 - track_1 (hard rock)
+            artist_1 - track_3 (post rock)
+            artist_2 - track_6 (blues)
+            artist_5 - track_7 (rap)
+            artist_2 - track_4 (blues)
     """
 
     with transaction.atomic():
-        for genre in ['genre_1', 'genre_2', 'genre_3']:
+        for genre in ['hard rock', 'post rock', 'post metal', 'hard bop',
+                      'punk rock', 'blues', 'rap']:
             Genre(name=genre).save()
-
-        for sub in ['subgenre_1', 'subgenre_2', 'subgenre_3']:
-            Subgenre(name=sub).save()
 
         for artist in ['artist_1', 'artist_2', 'artist_3',
                        'artist_4', 'artist_5']:
@@ -49,19 +50,22 @@ def prepare_data():
             ('artist_1', 'track_1'),
             ('artist_1', 'track_2'),
             ('artist_2', 'track_3'),
-            ('artist_3', 'track_1')
+            ('artist_3', 'track_1'),
+            ('artist_4', 'track_4')
         ],
         'user_2': [
-            ('artist_1', 'track_1'),
+            ('artist_1', 'track_4'),
             ('artist_1', 'track_3'),
             ('artist_2', 'track_4'),
-            ('artist_4', 'track_5')
+            ('artist_1', 'track_1'),
+            ('artist_2', 'track_5')
         ],
         'user_3': [
             ('artist_1', 'track_1'),
             ('artist_1', 'track_3'),
             ('artist_2', 'track_6'),
-            ('artist_5', 'track_7')
+            ('artist_5', 'track_7'),
+            ('artist_2', 'track_4')
         ]
     }
 
@@ -78,24 +82,26 @@ def prepare_data():
                 u.tracks.add(t)
 
     tags = {
-        ('artist_1', 'track_1'): ('genre_1', 'subgenre_1'),
-        ('artist_1', 'track_2'): ('genre_1', 'subgenre_2'),
-        ('artist_2', 'track_3'): ('genre_1', 'subgenre_1'),
-        ('artist_3', 'track_1'): ('genre_2', 'subgenre_1'),
-        ('artist_1', 'track_3'): ('genre_2', 'subgenre_1'),
-        ('artist_2', 'track_4'): ('genre_3', 'subgenre_1'),
-        ('artist_4', 'track_5'): ('genre_1', 'subgenre_3'),
-        ('artist_2', 'track_6'): ('genre_1', 'subgenre_3'),
-        ('artist_5', 'track_7'): ('genre_1', 'subgenre_2')
+        ('artist_1', 'track_1'): 'hard rock',
+        ('artist_1', 'track_2'): 'post rock',
+        ('artist_2', 'track_3'): 'post metal',
+        ('artist_3', 'track_1'): 'hard bop',
+        ('artist_4', 'track_4'): 'post rock',
+
+        ('artist_1', 'track_4'): 'punk rock',
+        ('artist_1', 'track_3'): 'post rock',
+        ('artist_2', 'track_4'): 'blues',
+        ('artist_2', 'track_5'): 'post metal',
+
+        ('artist_2', 'track_6'): 'blues',
+        ('artist_5', 'track_7'): 'rap'
     }
 
     for artist, title in tags:
         a = Artist.objects.get(name=artist)
-        g = Genre.objects.get(name=tags[(artist, title)][0])
-        s = Subgenre.objects.get(name=tags[(artist, title)][1])
 
         t = Track.objects.get(artist=a, title=title)
-        t.genre, t.subgenre = g, s
+        t.genre = Genre.objects.get(name=tags[(artist, title)])
         t.save()
 
 
@@ -105,50 +111,40 @@ class TrackModelTest(TestCase):
     def test_retrieve_users_by_genre(self):
         prepare_data()
 
-        q = (Track.objects.filter(genre__name='genre_1').
-             values_list('vkuser__name'). annotate(Count('vkuser__name')))
+        q = (Track.objects.filter(genre__name__contains='rock')
+             .values_list('vkuser__name').annotate(Count('vkuser__name')))
 
         users_tracks = {name: count for name, count in q}
 
         self.assertDictEqual(
             users_tracks,
-            {'Heisenberg': 3, 'Cat Whiskers': 2, 'Gordon Freeman': 3})
+            {'Heisenberg': 3, 'Cat Whiskers': 3, 'Gordon Freeman': 2})
 
-    def test_retrieve_users_by_subgenre(self):
+    def test_retrieve_users_by_diff_genres(self):
         prepare_data()
 
-        q = (Track.objects.filter(
-            genre__name='genre_1', subgenre__name='subgenre_1').
-             values_list('vkuser__name').annotate(Count('vkuser__name')))
+        condition = (Q(genre__name__contains='post') &
+                     (Q(genre__name__contains='rock') |
+                      Q(genre__name__contains='metal')))
+
+        q = (Track.objects.filter(condition).values_list('vkuser__name')
+             .annotate(Count('vkuser__name')))
 
         users_tracks = {name: count for name, count in q}
 
         self.assertDictEqual(
             users_tracks,
-            {'Heisenberg': 2, 'Cat Whiskers': 1, 'Gordon Freeman': 1})
-
-    def test_retrieve_users_by_subgenre_w_diff_genres(self):
-        prepare_data()
-
-        genre_condition = Q(genre__name='genre_1') | Q(genre__name='genre_2')
-        q = (Track.objects.filter(genre_condition, subgenre__name='subgenre_1').
-             values_list('vkuser__name').annotate(Count('vkuser__name')))
-
-        users_tracks = {name: count for name, count in q}
-
-        self.assertDictEqual(
-            users_tracks,
-            {'Heisenberg': 3, 'Cat Whiskers': 2, 'Gordon Freeman': 2})
+            {'Heisenberg': 3, 'Cat Whiskers': 2, 'Gordon Freeman': 1})
 
     def test_retrieve_common_subgenres_for_all_users(self):
         prepare_data()
 
         userlist = VkUser.objects.all()
-        tracks = (Track.objects.filter(vkuser__in=userlist).
-                  values_list('subgenre__name', 'genre__name', 'vkuser__name').
-                  annotate(Count('subgenre')))
-        group_by_genre = {' '.join(x[0:2]): [] for x in tracks}
-        [group_by_genre[' '.join(x[0:2])].append((x[2], x[3])) for x in tracks]
+        tracks = (Track.objects.filter(vkuser__in=userlist)
+                  .values_list('genre__name', 'vkuser__name')
+                  .annotate(Count('genre')))
+        group_by_genre = {x[0]: [] for x in tracks}
+        [group_by_genre[x[0]].append((x[1], x[2])) for x in tracks]
 
         result = {g: sorted(u, key=lambda x: x[0])
                   for g, u in group_by_genre.items()
@@ -157,11 +153,11 @@ class TrackModelTest(TestCase):
         self.assertDictEqual(
             result,
             {
-                'subgenre_1 genre_1': sorted(
-                    [('Heisenberg', 2), ('Cat Whiskers', 1),
-                     ('Gordon Freeman', 1)], key=lambda x: x[0]),
-                'subgenre_1 genre_2': sorted(
+                'hard rock': sorted(
                     [('Heisenberg', 1), ('Cat Whiskers', 1),
+                     ('Gordon Freeman', 1)], key=lambda x: x[0]),
+                'post rock': sorted(
+                    [('Heisenberg', 2), ('Cat Whiskers', 1),
                      ('Gordon Freeman', 1)], key=lambda x: x[0])
             }
         )
@@ -183,8 +179,8 @@ class VkUserModelTest(TestCase):
         others_genres = {
             u.name: {
                 x[0]: x[1] for x in
-                u.tracks.filter(genre__name__in=heisenberg_genres).
-                    values_list('genre__name').annotate(Count('genre'))
+                u.tracks.filter(genre__name__in=heisenberg_genres)
+                        .values_list('genre__name').annotate(Count('genre'))
             } for u in others
         }
 
@@ -196,42 +192,7 @@ class VkUserModelTest(TestCase):
         }
 
         self.assertDictEqual(common['Cat Whiskers'],
-                             {'genre_1': 2, 'genre_2': 1})
+                             {'hard rock': 1, 'post rock': 1, 'post metal': 1})
 
         self.assertDictEqual(common['Gordon Freeman'],
-                             {'genre_1': 3, 'genre_2': 1})
-
-    def test_retrieve_user_common_subgenres(self):
-        prepare_data()
-
-        cat_genres = {
-            ' '.join(x[0:2]): x[2] for x in
-            (VkUser.objects.get(name='Cat Whiskers').
-             tracks.values_list('subgenre__name', 'genre__name').
-             annotate(Count('subgenre')))
-        }
-
-        others = VkUser.objects.all().exclude(name='Cat Whiskers')
-        others_genres = {
-            u.name: {
-                ' '.join(x[0:2]): x[2] for x in
-                u.tracks.values_list('subgenre__name', 'genre__name').
-                    annotate(Count('subgenre'))
-                if ' '.join(x[0:2]) in cat_genres
-            } for u in others
-        }
-
-        common = {
-            user_name: {
-                name: min(genres[name], cat_genres[name])
-                for name in genres
-            } for user_name, genres in others_genres.items()
-        }
-
-        self.assertDictEqual(common['Heisenberg'],
-                             {'subgenre_1 genre_1': 1, 'subgenre_1 genre_2': 1})
-
-        self.assertDictEqual(
-            common['Gordon Freeman'],
-            {'subgenre_1 genre_1': 1, 'subgenre_1 genre_2': 1,
-             'subgenre_3 genre_1': 1})
+                             {'hard rock': 1, 'post rock': 1})
