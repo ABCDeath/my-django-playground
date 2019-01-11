@@ -41,14 +41,14 @@ class Genre(models.Model):
     name = models.CharField(max_length=32, unique=True)
 
     def __str__(self):
-        return self.name
+        return str(self.name).title()
 
 
 class Artist(models.Model):
     name = models.CharField(max_length=64, unique=True)
 
     def __str__(self):
-        return f'{self.name}'
+        return str(self.name).title()
 
 
 class Track(models.Model):
@@ -58,13 +58,15 @@ class Track(models.Model):
                               null=True, blank=True)
 
     def __str__(self):
-        return f'"{self.title}" by {self.artist} ({self.genre or ""})'
+        return f'"{str(self.title).title()}" by {str(self.artist).title()} ' \
+               f'({str(self.genre).title() or ""})'
 
 
 class VkUser(models.Model):
     vk_id = models.CharField(max_length=8, unique=True)
     name = models.CharField(max_length=64)
     tracks = models.ManyToManyField(Track)
+    friends = models.ManyToManyField('self')
 
     def __str__(self):
         return f'{self.vk_id}: {self.name}'
