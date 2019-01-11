@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>User detail</title>
+
+    <link href="http://cdn.pydata.org/bokeh/release/bokeh-1.0.4.min.css" rel="stylesheet" type="text/css">
+    <link href="http://cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.4.min.css" rel="stylesheet" type="text/css">
+
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'vk_audio_stats/style.css' %}">
+
+    <script src="http://cdn.pydata.org/bokeh/release/bokeh-1.0.4.min.js"></script>
+    <script src="http://cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.4.min.js"></script>
+</head>
+
+<body>
+    <p>Пользователь: {{ object.name }} (id: {{ object.vk_id }})</p>
+    <div class="chart_holder">
+        {{ user_genre_chart.div | safe }}
+    </div>
+    <div class="chart_holder">
+        {{ all_friends_common_genre.div | safe }}
+    </div>
+    <div class="chart_holder">
+        {{ friends_compatibility.div | safe }}
+    </div>
+    {% for user, genre_chart in friend_common_genre_list.items %}
+        {{ genre_chart.div | safe }}
+        {{ genre_chart.script | safe }}
+    {% endfor %}
+</body>
+{{ user_genre_chart.script | safe }}
+{{ all_friends_common_genre.script | safe }}
+{{ friends_compatibility.script | safe }}
+</html>

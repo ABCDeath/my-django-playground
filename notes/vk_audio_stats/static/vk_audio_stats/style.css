@@ -8,3 +8,8 @@ fieldset {
     height: 200px;
     overflow: auto;
 }
+
+.chart_holder {
+    display: inline-block;
+    vertical-align: top;
+}

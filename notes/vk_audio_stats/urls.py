@@ -6,5 +6,6 @@ from . import views
 
 app_name = 'vk_audio_stats'
 urlpatterns = [
-    path('', views.index, name='index'),
+    path('genre/', views.genre, name='genre'),
+    path('user/<int:pk>', views.UserView.as_view(), name='user')
 ]
