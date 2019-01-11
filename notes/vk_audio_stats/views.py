@@ -10,16 +10,93 @@ from django.views import generic
 
 import pandas as pd
 
+from bokeh.core.properties import value
 from bokeh.embed import components
 from bokeh.io import output_file, show
-from bokeh.palettes import Category20
+from bokeh.models import ColumnDataSource
+from bokeh.palettes import Category20, Category20c, Spectral6
 from bokeh.plotting import figure
-from bokeh.transform import cumsum
+from bokeh.transform import cumsum, dodge, factor_cmap
 
 from .models import Artist, Genre, Track, VkUser
 
 
-def index(request):
+def genre_chart(title, genre_count):
+    data = pd.Series(genre_count).reset_index(name='value').rename(
+        columns={'index': 'genre'})
+    data['angle'] = data['value'] / data['value'].sum() * 2 * math.pi
+    data['color'] = (Category20c[len(genre_count)] if len(genre_count) > 2
+                     else Category20c[3][:2])
+
+    p = figure(plot_height=300, plot_width=400, title=title,
+               toolbar_location=None,
+               tools='hover', tooltips='@genre: @value', x_range=(-0.5, 1.0))
+    p.wedge(x=0, y=1, radius=0.4,
+            start_angle=cumsum('angle', include_zero=True),
+            end_angle=cumsum('angle'),
+            line_color='white', fill_color='color', legend='genre', source=data)
+
+    p.axis.axis_label = None
+    p.axis.visible = False
+    p.grid.grid_line_color = None
+
+    script, div = components(p)
+
+    return {'script': script, 'div': div}
+
+def friends_common_genre_chart(title, common_genre_list):
+    users = [u[0] for u in common_genre_list[list(common_genre_list.keys())[0]]]
+
+    data = {g: [u[1] for u in items] for g, items in common_genre_list.items()}
+    data['users'] = users
+
+    source = ColumnDataSource(data=data)
+
+    p = figure(x_range=users, plot_height=300, plot_width=400,
+               title=title, toolbar_location=None)
+
+    genres_num = len(common_genre_list)
+    position_list = [x*0.1 for x in range(-(genres_num//2), genres_num//2 + 1)]
+    if not genres_num % 2:
+        position_list.remove(0)
+
+    palette = Category20[genres_num if genres_num > 2 else 3]
+
+    for i, (pos, genre) in enumerate(zip(position_list, common_genre_list)):
+        p.vbar(x=dodge('users', pos, range=p.x_range), top=genre,
+               width=0.2, source=source, color=palette[i], legend=value(genre))
+
+    p.x_range.range_padding = 0.1
+    p.xgrid.grid_line_color = None
+    p.legend.location = 'top_left'
+    p.legend.orientation = 'horizontal'
+
+    script, div = components(p)
+
+    return {'script': script, 'div': div}
+
+def compatibility_chart(title, compatibility):
+    users = list(compatibility.keys())
+    source = ColumnDataSource(
+        data=dict(users=users, compatibility=list(compatibility.values())))
+
+    p = figure(x_range=users, y_range=(0, 100), plot_height=300,
+               toolbar_location=None, title=title, tools='hover',
+               tooltips=[('совместимость', '@compatibility')])
+    p.vbar(x='users', top='compatibility', width=0.9, source=source,
+           legend='users', line_color='white',
+           fill_color=factor_cmap('users', palette=Spectral6, factors=users))
+
+    p.xgrid.grid_line_color = None
+    p.legend.orientation = 'horizontal'
+    p.legend.location = 'top_center'
+
+    script, div = components(p)
+
+    return {'script': script, 'div': div}
+
+
+def genre(request):
     genre_list = [t.genre for t in
                   Track.objects.filter(vkuser__isnull=False).distinct('genre')]
 
@@ -28,23 +105,7 @@ def index(request):
                             .values_list('genre__name')
                             .annotate(Count('vkuser__name'))}
 
-    data = pd.Series(genre_user_count).reset_index(name='value').rename(
-        columns={'index': 'genre'})
-    data['angle'] = data['value'] / data['value'].sum() * 2 * math.pi
-    data['color'] = Category20[len(genre_user_count)]
-
-    p = figure(plot_height=350, title="Users for genre", toolbar_location=None,
-               tools="hover", tooltips="@genre: @value", x_range=(-0.5, 1.0))
-    p.wedge(x=0, y=1, radius=0.4,
-            start_angle=cumsum('angle', include_zero=True),
-            end_angle=cumsum('angle'),
-            line_color="white", fill_color='color', legend='genre', source=data)
-
-    p.axis.axis_label = None
-    p.axis.visible = False
-    p.grid.grid_line_color = None
-
-    script, div = components(p)
+    chart = genre_chart('Users for genre', genre_user_count)
 
     # пользователи по выбранным жанрам
     genre_id_list = request.GET.getlist('genre')
@@ -63,10 +124,10 @@ def index(request):
             if name not in user_list:
                 user_list[name] = {}
 
-            user_list[name][genre] = count
+            user_list[name][genre.title()] = count
 
-    return render(request, 'vk_audio_stats/index.html',
+    return render(request, 'vk_audio_stats/genre_list.html',
                   {'genre_list': genre_list,
-                   'script': script,
-                   'div': div,
+                   'checked_genre_list': [int(g) for g in genre_id_list],
+                   'chart': chart,
                    'user_list': user_list})
