@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Index page</title>
+    <title>Genre list</title>
 
     <link href="http://cdn.pydata.org/bokeh/release/bokeh-1.0.4.min.css" rel="stylesheet" type="text/css">
     <link href="http://cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.4.min.css" rel="stylesheet" type="text/css">
@@ -22,16 +22,19 @@
             <fieldset>
                 <legend>Доступные жанры:</legend>
                 {% for genre in genre_list %}
-                    <input type="checkbox" name="genre" id="genre{{ forloop.counter }}" value="{{ genre.id }}">
+                    {% if genre.id in checked_genre_list %}
+                        <input type="checkbox" name="genre" id="genre{{ forloop.counter }}" value="{{ genre.id }}" checked>
+                    {% else %}
+                        <input type="checkbox" name="genre" id="genre{{ forloop.counter }}" value="{{ genre.id }}">
+                    {% endif %}
                     <label for="genre{{ forloop.counter }}">{{ genre }}</label><br>
                 {% endfor %}
             </fieldset>
 
             <input type="submit" value="Показать пользователей"/>
-            <input type="reset" value="Сбросить">
         </form>
 
-        {{ div | safe }}
+        {{ chart.div | safe }}
     </div>
 
     <div class="fieldset_holder">
@@ -57,5 +60,5 @@
 {% endif %}
 
 </body>
-{{ script | safe }}
+{{ chart.script | safe }}
 </html>
