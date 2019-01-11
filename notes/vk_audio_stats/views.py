@@ -131,3 +131,71 @@ def genre(request):
                    'checked_genre_list': [int(g) for g in genre_id_list],
                    'chart': chart,
                    'user_list': user_list})
+
+
+class UserView(generic.DetailView):
+    model = VkUser
+    template_name = 'vk_audio_stats/user_detail.html'
+
+    # context_object_name = 'user_details'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        user = context['object']
+        user_friends = user.friends.all()
+
+        user_genres = {
+            x[0]: x[1] for x in
+            (user.tracks.values_list('genre__name')
+             .annotate(Count('genre')))
+        }
+
+        context['user_genre_chart'] = genre_chart(
+            f'Жанры пользователя {user.name}', user_genres)
+
+        condition = Q(vkuser__in=user_friends) | Q(vkuser=user)
+        tracks = (Track.objects.filter(condition)
+                  .values_list('genre__name', 'vkuser__name')
+                  .annotate(Count('genre')))
+        group_by_genre = {x[0]: [] for x in tracks}
+        [group_by_genre[x[0]].append((x[1], x[2])) for x in tracks]
+
+        common_for_all = {g: sorted(u, key=lambda x: x[0])
+                          for g, u in group_by_genre.items()
+                          if len(u) == len(user_friends)+1}
+
+        context['all_friends_common_genre'] = friends_common_genre_chart(
+            'Общие со всеми друзьями жанры', common_for_all)
+
+        friends_genres = {
+            u.name: {
+                x[0]: x[1] for x in
+                u.tracks.filter(genre__name__in=user_genres)
+                .values_list('genre__name').annotate(Count('genre'))
+            } for u in user_friends
+        }
+
+        common = {
+            user_name: {
+                name: min(genres[name], user_genres[name])
+                for name in genres
+            } for user_name, genres in friends_genres.items()
+        }
+
+        context['friend_common_genre_list'] = {
+            name: genre_chart(f'Общие жанры с пользователем {name}', genre_list)
+            for name, genre_list in common.items()
+        }
+
+        compatibility = {
+            name: (100*sum(genres.values()) /
+                   max(user.tracks.count(),
+                       user.friends.get(name=name).tracks.count()))
+            for name, genres in common.items()
+        }
+
+        context['friends_compatibility'] = compatibility_chart(
+            'Музыкальная совместимость с друзьями', compatibility)
+
+        return context
