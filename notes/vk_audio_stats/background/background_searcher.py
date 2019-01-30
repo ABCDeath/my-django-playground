@@ -1,27 +1,43 @@
-import json
-import os
 import requests
-import sys
 import time
 
 import discogs_client
-import django
 import musicbrainzngs
+import redis
 import vk_api
 from bs4 import BeautifulSoup
 from vk_api.audio import VkAudio
 
 
-sys.path.extend([os.getcwd() + '/notes'])
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "notes.settings")
-django.setup()
+def lockable(lock_name=None):
+    def decorator(func):
+        nonlocal lock_name
+        if not lock_name:
+            lock_name = ''.join([func.__name__, '_lock'])
+
+        lock = REDIS_CLIENT.lock(lock_name)
+
+        def wrapper(*args, **kwargs):
+            with lock:
+                res = func(*args, **kwargs)
+
+            return res
+
+        return wrapper
+
+    return decorator
 
 
-with open('credentials.json') as cred_file:
-    credentials = json.load(cred_file)
+
+class Singleton(type):
+    _instance = {}
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instance:
+            cls._instance[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+        return cls._instance[cls]
 
 
-class TagFinder:
+class TagFinder(metaclass=Singleton):
     def __init__(self, discogs_creds):
         self._dgs = discogs_client.Client(
             discogs_creds['app_name'], user_token=discogs_creds['token'])
@@ -96,11 +112,11 @@ class TagFinder:
                 self._google(artist, track))
 
 
-class VkData:
+class VkApi(metaclass=Singleton):
     def __init__(self, credentials):
-        self._session = vk_api.VkApi(login=credentials['vk']['login'],
-                                     password=credentials['vk']['password'],
-                                     token=credentials['vk']['token'])
+        self._session = vk_api.VkApi(login=credentials['login'],
+                                     password=credentials['password'],
+                                     token=credentials['token'])
         try:
             self._session.auth()
         except vk_api.AuthError as e:
@@ -111,21 +127,44 @@ class VkData:
         self._api = self._session.get_api()
 
     def friends(self, id):
-        return self._api.friends.get(user_id=id)['items']
+        friend_list = self._api.friends.get(user_id=id, fields=['name'])
+        return {u['id']: ' '.join([u['first_name'], u['last_name']])
+                for u in friend_list['items'] if 'deactivated' not in u}
 
     def username(self, id):
-        user = self._api.users.get(user_ids=id)
+        user = self._api.users.get(user_ids=id)[0]
         return ' '.join([user['first_name'], user['last_name']])
 
     def track_list(self, id):
-        return [(t['artist'], t['title'])
+        return [(t['artist'].lower(), t['title'].lower())
                 for t in self._audio.get(owner_id=id)]
 
 
-def get_track_list(vk_id):
-    pass
+REDIS_CLIENT = redis.Redis()
 
 
-def find_tags(artist, track):
-    pass
+class TagFinderLockable(TagFinder):
+    @lockable()
+    def _musicbrainz(self, *args, **kwargs):
+        return super()._musicbrainz(*args, **kwargs)
 
+    @lockable()
+    def _discogs(self, *args, **kwargs):
+        return super()._discogs(*args, **kwargs)
+
+    @lockable()
+    def _google(self, *args, **kwargs):
+        return super()._google(*args, **kwargs)
+
+class VkApiLockable(VkApi):
+    @lockable('vk_lock')
+    def friends(self, *args, **kwargs):
+        return super().friends(*args, **kwargs)
+
+    @lockable('vk_lock')
+    def username(self, *args, **kwargs):
+        return super().username(*args, **kwargs)
+
+    @lockable('vk_lock')
+    def track_list(self, *args, **kwargs):
+        return super().track_list(*args, **kwargs)
