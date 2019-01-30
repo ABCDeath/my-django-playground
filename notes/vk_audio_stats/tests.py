@@ -40,9 +40,9 @@ def prepare_data():
             Artist(name=artist).save()
 
     users = {
-        'user_1': 'Heisenberg',
-        'user_2': 'Cat Whiskers',
-        'user_3': 'Gordon Freeman'
+        1: 'Heisenberg',
+        2: 'Cat Whiskers',
+        3: 'Gordon Freeman'
     }
 
     tracks = {

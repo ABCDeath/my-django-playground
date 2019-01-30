@@ -59,11 +59,11 @@ class Track(models.Model):
 
     def __str__(self):
         return f'"{str(self.title).title()}" by {str(self.artist).title()} ' \
-               f'({str(self.genre).title() or ""})'
+               f'({self.genre or "".title()})'
 
 
 class VkUser(models.Model):
-    vk_id = models.CharField(max_length=8, unique=True)
+    vk_id = models.IntegerField(unique=True)
     name = models.CharField(max_length=64)
     tracks = models.ManyToManyField(Track)
     friends = models.ManyToManyField('self')
