@@ -1,7 +1,24 @@
-.fieldset_holder {
-    width: 600px;
-    display: inline-block;
-    vertical-align: top;
+.genre-container {
+    display: grid;
+    min-height: 200px;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    grid-template-rows: 2fr;
+    grid-gap: 5px;
+    align-items: center;
+}
+
+.chart-container {
+    max-width: 500px;
+    min-width: 400px;
+}
+
+.genre-list-container {
+    min-width: 400px;
+}
+
+.user-genre-container {
+    grid-column: 1 / 3;
+    grid-row: 2 / 3;
 }
 
 fieldset {
@@ -12,4 +29,22 @@ fieldset {
 .chart_holder {
     display: inline-block;
     vertical-align: top;
+}
+
+#show-users-button {
+    border-radius: 3px;
+    background-color: #EFEFEF;
+    padding: 5px 10px 8px 10px;
+}
+
+#show-users-button:hover {
+    animation-name: button-hover;
+    animation-duration: 300ms;
+    animation-fill-mode: forwards;
+}
+
+@keyframes button-hover {
+    100% {
+        background-color: #8ED7FF;
+    }
 }
