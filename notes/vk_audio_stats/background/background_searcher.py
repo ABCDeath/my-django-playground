@@ -7,6 +7,7 @@ import redis
 import vk_api
 from bs4 import BeautifulSoup
 from vk_api.audio import VkAudio
+from vk_api.exceptions import AccessDenied
 
 
 def lockable(lock_name=None):
@@ -49,6 +50,7 @@ class TagFinder(metaclass=Singleton):
             }
 
         self._google_last_time = 0
+        self._discogs_last_time = 0
 
     def _wait(self, last, rate):
         if time.time() - last < 1 / rate:
@@ -65,20 +67,30 @@ class TagFinder(metaclass=Singleton):
             return None
 
         if 'tag-list' in res[0]:
-            return sorted(res[0]['tag-list'], key=lambda x: x['count'])[-1]
+            return sorted(res[0]['tag-list'],
+                          key=lambda x: x['count'])[-1]['name']
 
         for r in res[0]['release-list']:
             if 'tag-list' in r:
                 return sorted(r['tag-list'],
-                              key=lambda x: int(x['ext:score']))[-1]
+                              key=lambda x: int(x['ext:score']))[-1]['name']
 
         artist_id = res[0]['artist-credit'][0]['artist']['id']
         a = musicbrainzngs.get_artist_by_id(id=artist_id, includes=['tags'])
 
-        return sorted(a['tag-list'], key=lambda x: int(x['ext:score']))[-1]
+        if 'tag-list' not in a:
+            return None
+
+        return sorted(a['tag-list'],
+                      key=lambda x: int(x['ext:score']))[-1]['name']
 
     def _discogs(self, artist, track):
+        self._wait(self._google_last_time, 1)
+
         res = self._dgs.search('*', type='release', artist=artist, track=track)
+
+        self._discogs_last_time = time.time()
+
         return (res[0].styles or res[0].genres)[0] if res else None
 
     def _google(self, artist, track):
@@ -88,7 +100,13 @@ class TagFinder(metaclass=Singleton):
         self._wait(self._google_last_time, 1)
 
         url = f'https://www.google.com/search?q={query}&num=1&hl=en'
-        response = requests.get(url, headers=self._user_agent)
+        # TODO: ??? ('Connection aborted.', OSError(107, 'Transport endpoint is not connected'))
+        try:
+            response = requests.get(url, headers=self._user_agent)
+        except requests.exceptions.ConnectionError as ex:
+            print(f'error: {ex} while trying url {url}')
+            return None
+
         self._google_last_time = time.time()
 
         soup = BeautifulSoup(response.text, 'lxml')
@@ -136,8 +154,14 @@ class VkApi(metaclass=Singleton):
         return ' '.join([user['first_name'], user['last_name']])
 
     def track_list(self, id):
-        return [(t['artist'].lower(), t['title'].lower())
-                for t in self._audio.get(owner_id=id)]
+        try:
+            tracklist = [(t['artist'].lower(), t['title'].lower())
+                         for t in self._audio.get(owner_id=id)]
+        except AccessDenied:
+            tracklist = []
+
+        return tracklist
+
 
 
 REDIS_CLIENT = redis.Redis()
