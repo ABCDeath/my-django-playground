@@ -45,14 +45,14 @@ class Genre(models.Model):
 
 
 class Artist(models.Model):
-    name = models.CharField(max_length=64, unique=True)
+    name = models.CharField(max_length=128, unique=True)
 
     def __str__(self):
         return str(self.name).title()
 
 
 class Track(models.Model):
-    title = models.CharField(max_length=64, unique=False)
+    title = models.CharField(max_length=128, unique=False)
     artist = models.ForeignKey(Artist, on_delete=models.DO_NOTHING)
     genre = models.ForeignKey(Genre, on_delete=models.DO_NOTHING,
                               null=True, blank=True)
