@@ -14,7 +14,7 @@ import redis
 from bokeh.core.properties import value
 from bokeh.embed import components
 from bokeh.models import ColumnDataSource
-from bokeh.palettes import Category20, Category20c, Spectral6
+from bokeh.palettes import viridis, Spectral6
 from bokeh.plotting import figure
 from bokeh.transform import cumsum, dodge, factor_cmap
 
@@ -26,8 +26,7 @@ def genre_chart(title, genre_count):
     data = pd.Series(genre_count).reset_index(name='value').rename(
         columns={'index': 'genre'})
     data['angle'] = data['value'] / data['value'].sum() * 2 * math.pi
-    data['color'] = (Category20c[len(genre_count)] if len(genre_count) > 2
-                     else Category20c[3][:2])
+    data['color'] = viridis(len(genre_count))
 
     p = figure(plot_height=300, plot_width=400, title=title,
                toolbar_location=None,
@@ -45,6 +44,7 @@ def genre_chart(title, genre_count):
 
     return {'script': script, 'div': div}
 
+
 def friends_common_genre_chart(title, common_genre_list):
     users = [u[0] for u in common_genre_list[list(common_genre_list.keys())[0]]]
 
@@ -57,11 +57,12 @@ def friends_common_genre_chart(title, common_genre_list):
                title=title, toolbar_location=None)
 
     genres_num = len(common_genre_list)
-    position_list = [x*0.1 for x in range(-(genres_num//2), genres_num//2 + 1)]
+    position_list = [x * 0.1 for x in
+                     range(-(genres_num // 2), genres_num // 2 + 1)]
     if not genres_num % 2:
         position_list.remove(0)
 
-    palette = Category20[genres_num if genres_num > 2 else 3]
+    palette = viridis(genres_num)
 
     for i, (pos, genre) in enumerate(zip(position_list, common_genre_list)):
         p.vbar(x=dodge('users', pos, range=p.x_range), top=genre,
@@ -76,12 +77,15 @@ def friends_common_genre_chart(title, common_genre_list):
 
     return {'script': script, 'div': div}
 
+
 def compatibility_chart(title, compatibility):
     users = list(compatibility.keys())
     source = ColumnDataSource(
         data=dict(users=users, compatibility=list(compatibility.values())))
 
-    p = figure(x_range=users, y_range=(0, 100), plot_height=300,
+    y_max = max(compatibility.values()) + 0.1 * max(compatibility.values())
+
+    p = figure(x_range=users, y_range=(0, y_max), plot_height=300,
                toolbar_location=None, title=title, tools='hover',
                tooltips=[('совместимость', '@compatibility')])
     p.vbar(x='users', top='compatibility', width=0.9, source=source,
@@ -116,13 +120,18 @@ def index(request):
 
 
 def genre(request):
-    genre_list = [t.genre for t in
-                  Track.objects.filter(vkuser__isnull=False).distinct('genre')]
+    genre_list = [
+        t.genre for t in Track.objects
+        .filter(vkuser__isnull=False, genre__isnull=False)
+        .distinct('genre')
+    ]
 
-    genre_user_count = {g[0]: g[1] for g in
-                        Track.objects.filter(vkuser__isnull=False)
-                            .values_list('genre__name')
-                            .annotate(Count('vkuser__name'))}
+    genre_user_count = {
+        g[0]: g[1] for g in Track.objects
+        .filter(vkuser__isnull=False, genre__isnull=False)
+        .values_list('genre__name')
+        .annotate(Count('vkuser__name'))
+    }
 
     chart = genre_chart('Users for genre', genre_user_count)
 
@@ -179,14 +188,15 @@ class UserView(generic.DetailView):
 
         user_genres = {
             x[0]: x[1] for x in
-            (user.tracks.values_list('genre__name')
+            (user.tracks.filter(genre__isnull=False).values_list('genre__name')
              .annotate(Count('genre')))
         }
 
         context['user_genre_chart'] = genre_chart(
             f'Жанры пользователя {user.name}', user_genres)
 
-        condition = Q(vkuser__in=user_friends) | Q(vkuser=user)
+        condition = ((Q(vkuser__in=user_friends) | Q(vkuser=user)) &
+                     Q(genre__isnull=False))
         tracks = (Track.objects.filter(condition)
                   .values_list('genre__name', 'vkuser__name')
                   .annotate(Count('genre')))
@@ -195,24 +205,25 @@ class UserView(generic.DetailView):
 
         common_for_all = {g: sorted(u, key=lambda x: x[0])
                           for g, u in group_by_genre.items()
-                          if len(u) == len(user_friends)+1}
+                          if len(u) == len(user_friends) + 1}
 
-        context['all_friends_common_genre'] = friends_common_genre_chart(
-            'Общие со всеми друзьями жанры', common_for_all)
+        if common_for_all:
+            context['all_friends_common_genre'] = friends_common_genre_chart(
+                'Общие со всеми друзьями жанры', common_for_all)
 
         friends_genres = {
             u.name: {
                 x[0]: x[1] for x in
                 u.tracks.filter(genre__name__in=user_genres)
-                .values_list('genre__name').annotate(Count('genre'))
+                        .values_list('genre__name').annotate(Count('genre'))
             } for u in user_friends
         }
 
         common = {
             user_name: {
-                name: min(genres[name], user_genres[name])
-                for name in genres
-            } for user_name, genres in friends_genres.items()
+                name: min(genre_list[name], user_genres[name])
+                for name in genre_list
+            } for user_name, genre_list in friends_genres.items() if genre_list
         }
 
         context['friend_common_genre_list'] = {
@@ -221,7 +232,7 @@ class UserView(generic.DetailView):
         }
 
         compatibility = {
-            name: (100*sum(genres.values()) /
+            name: (100 * sum(genres.values()) /
                    max(user.tracks.count(),
                        user.friends.get(name=name).tracks.count()))
             for name, genres in common.items()
