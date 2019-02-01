@@ -22,13 +22,15 @@ from .models import Artist, Genre, Track, VkUser
 from .tasks import db_update_user
 
 
-def genre_chart(title, genre_count):
+def genre_chart(title, genre_count, large=False):
     data = pd.Series(genre_count).reset_index(name='value').rename(
         columns={'index': 'genre'})
     data['angle'] = data['value'] / data['value'].sum() * 2 * math.pi
     data['color'] = viridis(len(genre_count))
 
-    p = figure(plot_height=300, plot_width=400, title=title,
+    height = 600 if large else 300
+    width = 800 if large else 400
+    p = figure(plot_height=height, plot_width=width, title=title,
                toolbar_location=None,
                tools='hover', tooltips='@genre: @value', x_range=(-0.5, 1.0))
     p.wedge(x=0, y=1, radius=0.4,
@@ -133,7 +135,7 @@ def genre(request):
         .annotate(Count('vkuser__name'))
     }
 
-    chart = genre_chart('Users for genre', genre_user_count)
+    chart = genre_chart('Users for genre', genre_user_count, large=True)
 
     # пользователи по выбранным жанрам
     genre_id_list = request.GET.getlist('genre')
