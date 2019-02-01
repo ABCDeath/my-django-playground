@@ -1,2 +1,5 @@
+bokeh
 django
+pandas
 psycopg2
+redis

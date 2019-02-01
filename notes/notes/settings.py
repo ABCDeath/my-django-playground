@@ -149,3 +149,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
 
 STATIC_URL = '/static/'
+
+# Celery settings
+REDIS_SERVER = 'redis://localhost:6379/0'
+CELERY_BROKER_URL = REDIS_SERVER
+CELERY_RESULT_BACKEND = REDIS_SERVER

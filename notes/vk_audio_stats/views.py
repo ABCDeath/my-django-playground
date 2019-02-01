@@ -9,16 +9,17 @@ from django.urls import reverse
 from django.views import generic
 
 import pandas as pd
+import redis
 
 from bokeh.core.properties import value
 from bokeh.embed import components
-from bokeh.io import output_file, show
 from bokeh.models import ColumnDataSource
 from bokeh.palettes import Category20, Category20c, Spectral6
 from bokeh.plotting import figure
 from bokeh.transform import cumsum, dodge, factor_cmap
 
 from .models import Artist, Genre, Track, VkUser
+from .tasks import db_update_user
 
 
 def genre_chart(title, genre_count):
@@ -96,6 +97,24 @@ def compatibility_chart(title, compatibility):
     return {'script': script, 'div': div}
 
 
+def index(request):
+    artist_count = Artist.objects.all().count()
+    track_count = Track.objects.all().count()
+    user_count = VkUser.objects.all().count
+
+    if request.method == 'POST':
+        db_update_user.delay(request.POST.get('vk_user_id_to_update'))
+
+        return HttpResponseRedirect(
+            reverse('vk_audio_stats:user',
+                    args=(request.POST.get('vk_user_id_to_update'),)))
+
+    return render(request, 'vk_audio_stats/index.html',
+                  {'artist_count': artist_count,
+                   'track_count': track_count,
+                   'user_count': user_count})
+
+
 def genre(request):
     genre_list = [t.genre for t in
                   Track.objects.filter(vkuser__isnull=False).distinct('genre')]
@@ -136,13 +155,26 @@ def genre(request):
 class UserView(generic.DetailView):
     model = VkUser
     template_name = 'vk_audio_stats/user_detail.html'
+    pk_url_kwarg = 'vk_id'
 
     # context_object_name = 'user_details'
+
+    def get_object(self, queryset=None):
+        return get_object_or_404(VkUser, vk_id=self.kwargs.get('vk_id', 0))
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
         user = context['object']
+
+        redis_client = redis.Redis()
+        state = redis_client.get(f'update state {user.vk_id}')
+
+        context['update_state'] = (True if not state or
+                                           state == b'finished' else False)
+        if not context['update_state']:
+            return context
+
         user_friends = user.friends.all()
 
         user_genres = {

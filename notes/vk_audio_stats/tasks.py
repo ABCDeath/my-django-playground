@@ -5,43 +5,61 @@ import sys
 from functools import reduce
 from operator import or_
 
-import django
-from celery import Celery
+# import django
+# from celery import Celery
+import redis
 from celery.utils.log import get_task_logger
-
-import background_searcher
-
-sys.path.extend([os.getenv('DJANGO_PROJECT_PATH')])
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "notes.settings")
-django.setup()
-
 from django.db.models import Q
+
+from . import background_searcher
+from notes.celery import background_worker
+
+# sys.path.extend([os.getenv('DJANGO_PROJECT_PATH')])
+# os.environ.setdefault("DJANGO_SETTINGS_MODULE", "notes.settings")
+# django.setup()
 
 from vk_audio_stats.models import Artist, Genre, Track, VkUser
 
-REDIS_SERVER = 'redis://localhost:6379/0'
-background_worker = Celery('tasks', backend=REDIS_SERVER, broker=REDIS_SERVER)
+# REDIS_SERVER = 'redis://localhost:6379/0'
+# background_worker = Celery('tasks', backend=REDIS_SERVER, broker=REDIS_SERVER)
 
 logger = get_task_logger(__name__)
-
-
-def get_credentials():
-    with open('credentials.json') as cred_file:
-        credentials = json.load(cred_file)
-    return credentials
+redis_client = redis.Redis()
 
 
 @background_worker.task
+def dummy(vk_id):
+    redis_set_user_update_status(vk_id)
+    import time
+    logger.info(f'dummy task {vk_id}')
+    time.sleep(5)
+    redis_set_user_update_status(vk_id, False)
+    logger.info(f'dummy task {vk_id} finished')
+
+
+
+def get_credentials():
+    with open('vk_audio_stats/credentials.json') as cred_file:
+        credentials = json.load(cred_file)
+    return credentials
+
+def redis_set_user_update_status(vk_id, state=True):
+    redis_client.set(f'update state {vk_id}',
+                     'in progress' if state else 'finished')
+
+@background_worker.task
 def db_update_user(vk_id):
+    redis_set_user_update_status(vk_id)
+
     credentials = get_credentials()
     vk_api = background_searcher.VkApiLockable(credentials['vk'])
 
     username = vk_api.username(vk_id)
 
-    user_object, created = (VkUser.objects.prefetch_related('friends')
-                            .get_or_create(vk_id=vk_id,
-                                           defaults={'vk_id': vk_id,
-                                                     'name': username}))
+    user_object, created = (
+        VkUser.objects.prefetch_related('friends')
+            .get_or_create(vk_id=vk_id,
+                           defaults={'vk_id': vk_id, 'name': username}))
     if created:
         user_object.save()
 
@@ -56,6 +74,8 @@ def db_update_user(vk_id):
              db_update_tracks.si(vk_id, vk_api.track_list(vk_id))]
     tasks.extend([db_update_tracks.si(uid, vk_api.track_list(uid))
                   for uid in user_friends])
+    tasks.append(finish.si(vk_id))
+
     task_chain = reduce(or_, tasks)
 
     task_chain()
@@ -178,3 +198,8 @@ def db_update_track_genre(track_list):
         track_object = Track.objects.get(title=track, artist__name=artist)
         track_object.genre = genre_object
         track_object.save()
+
+@background_worker.task
+def finish(vk_id):
+    redis_set_user_update_status(vk_id, False)
+    logger.info(f'обновление {vk_id} завершено')
