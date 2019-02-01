@@ -133,9 +133,9 @@ def db_update_tracks(vk_id, track_list):
 
     logger.info(f'{vk_id}: добавлено {len(new_artists)} исполнителей в бд.')
 
-    new_tracks = set((a, t) for a, t in track_list
+    new_tracks = list(set((a, t) for a, t in track_list
                   if not Track.objects.filter(title=t, artist__name=a).exists()
-                  and len(t) <= Artist._meta.get_field('title').max_length)
+                  and len(t) <= Artist._meta.get_field('title').max_length))
 
     objs = (Track(title=t, artist=Artist.objects.get(name=a))
             for a, t in new_tracks)
