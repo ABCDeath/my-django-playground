@@ -4,61 +4,66 @@
     <meta charset="UTF-8">
     <title>Genre list</title>
 
+    <!-- для диаграм bokeh-->
     <link href="http://cdn.pydata.org/bokeh/release/bokeh-1.0.4.min.css" rel="stylesheet" type="text/css">
     <link href="http://cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.4.min.css" rel="stylesheet" type="text/css">
 
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'vk_audio_stats/style.css' %}">
 
+    <!-- для диаграм bokeh-->
     <script src="http://cdn.pydata.org/bokeh/release/bokeh-1.0.4.min.js"></script>
     <script src="http://cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.4.min.js"></script>
 </head>
 
 <body>
+<header><p>Статистика музыкальных жанров по пользователям.</p></header>
+<main>
+    {% if genre_list %}
+        <div class="genre-container">
+            <div class="chart-container">{{ chart.div | safe }}</div>
 
-{% if genre_list %}
-    <div class="fieldset_holder">
-        <form action="" method="get">
-            <fieldset>
-                <legend>Доступные жанры:</legend>
-                {% for genre in genre_list %}
-                    {% if genre.id in checked_genre_list %}
-                        <input type="checkbox" name="genre" id="genre{{ forloop.counter }}" value="{{ genre.id }}" checked>
-                    {% else %}
-                        <input type="checkbox" name="genre" id="genre{{ forloop.counter }}" value="{{ genre.id }}">
-                    {% endif %}
-                    <label for="genre{{ forloop.counter }}">{{ genre }}</label><br>
-                {% endfor %}
-            </fieldset>
+            <div class="genre-list-container">
+                <form action="" method="get">
+                    <fieldset>
+                        <legend>Доступные жанры:</legend>
+                        {% for genre in genre_list %}
+                            {% if genre.id in checked_genre_list %}
+                                <input type="checkbox" name="genre" id="genre{{ forloop.counter }}" value="{{ genre.id }}" checked>
+                            {% else %}
+                                <input type="checkbox" name="genre" id="genre{{ forloop.counter }}" value="{{ genre.id }}">
+                            {% endif %}
+                            <label for="genre{{ forloop.counter }}">{{ genre }}</label><br>
+                        {% endfor %}
+                    </fieldset>
 
-            <input type="submit" value="Показать пользователей"/>
-        </form>
+                    <input id="show-users-button" type="submit" value="Показать пользователей"/>
+                </form>
+            </div>
 
-        {{ chart.div | safe }}
-    </div>
-
-    <div class="fieldset_holder">
-        {% if user_list %}
-            <fieldset>
-                <legend>Пользователи, у которых есть треки выбранных жанров:</legend>
-                <ul>
-                    {% for user, genre_list in user_list.items %}
-                        <li>{{ user }}:
-                            <ul>
-                                {% for genre, count in genre_list.items %}
-                                    <li>{{ genre }}: {{ count }}</li>
-                                {% endfor %}
-                            </ul>
-                        </li>
-                    {% endfor %}
-                </ul>
-            </fieldset>
-        {% endif %}
-    </div>
-{% else %}
-    <p>Список жанров недоступен.</p>
-{% endif %}
-
+            <div class="user-genre-container">
+                {% if user_list %}
+                    <fieldset>
+                        <legend>Пользователи, у которых есть треки выбранных жанров:</legend>
+                        <ul>
+                            {% for user, genre_list in user_list.items %}
+                                <li>{{ user }}:
+                                    <ul>
+                                        {% for genre, count in genre_list.items %}
+                                            <li>{{ genre }}: {{ count }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </fieldset>
+                {% endif %}
+            </div>
+        </div>
+    {% else %}
+        <p>Список жанров недоступен.</p>
+    {% endif %}
+</main>
 </body>
 {{ chart.script | safe }}
 </html>

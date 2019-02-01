@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Index page</title>
+</head>
+<body>
+<header>
+    <fieldset>
+        <legend>Всего в базе даных:</legend>
+        <ul>
+            <li>Пользователей: {{ user_count }}</li>
+            <li>Исполнителей: {{ artist_count }}</li>
+            <li>Треков: {{ track_count }}</li>
+        </ul>
+    </fieldset>
+</header>
+<main>
+    <form action="{% url 'vk_audio_stats:index' %}" method="post">
+        {% csrf_token %}
+        <label for="vk_user_to_update">id пользователя для обновления:</label>
+        <input type="text" id="vk_user_to_update" name="vk_user_id_to_update">
+        <input type="submit" id="update_user_button" value="Обновить">
+    </form>
+</main>
+</body>
+</html>

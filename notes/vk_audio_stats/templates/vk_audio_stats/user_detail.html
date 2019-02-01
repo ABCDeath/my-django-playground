@@ -15,20 +15,26 @@
 </head>
 
 <body>
-    <p>Пользователь: {{ object.name }} (id: {{ object.vk_id }})</p>
-    <div class="chart_holder">
-        {{ user_genre_chart.div | safe }}
-    </div>
-    <div class="chart_holder">
-        {{ all_friends_common_genre.div | safe }}
-    </div>
-    <div class="chart_holder">
-        {{ friends_compatibility.div | safe }}
-    </div>
-    {% for user, genre_chart in friend_common_genre_list.items %}
-        {{ genre_chart.div | safe }}
-        {{ genre_chart.script | safe }}
-    {% endfor %}
+    <header>Пользователь: {{ object.name }} (id: {{ object.vk_id }})</header>
+    <main>
+        {% if update_state %}
+            <div class="chart_holder">
+                {{ user_genre_chart.div | safe }}
+            </div>
+            <div class="chart_holder">
+                {{ all_friends_common_genre.div | safe }}
+            </div>
+            <div class="chart_holder">
+                {{ friends_compatibility.div | safe }}
+            </div>
+            {% for user, genre_chart in friend_common_genre_list.items %}
+                {{ genre_chart.div | safe }}
+                {{ genre_chart.script | safe }}
+            {% endfor %}
+        {% else %}
+         <p>Информация обновляется...</p>
+        {% endif %}
+    </main>
 </body>
 {{ user_genre_chart.script | safe }}
 {{ all_friends_common_genre.script | safe }}
